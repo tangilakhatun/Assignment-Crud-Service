@@ -1,5 +1,5 @@
 const express = require("express");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const cors = require("cors");
 const app = express();
@@ -9,7 +9,8 @@ app.use(cors());
 app.use(express.json());
 
 
-const uri = `mongodb+srv://${process.env.USERNAME_BD}:${process.env.USERNAME_PASSWORD}@cluster0.ri8wtve.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+const uri = `mongodb+srv://${process.env.USERNAME_BD}:${process.env.USERNAME_PASSWORD}
+@cluster0.ri8wtve.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 const client = new MongoClient(uri, {
   serverApi: {
@@ -53,6 +54,17 @@ app.get("/api/cards", async (req, res) => {
   }
 });
 
+app.get('/api/cards/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const card = await simpleCardCollection.findOne({ _id: new ObjectId(id) });
+    if (!card) return res.status(404).json({ message: 'Card not found' });
+    res.json(card);
+  } catch (err) {
+    console.error("Error fetching single card:", err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
 app.get("/", (req, res) => {
   res.send(" simple crud server is running successfully");
