@@ -27,7 +27,29 @@ const client = new MongoClient(uri, {
   },
 });
 
-let db, usersCol, simpleCardCollection;
+let db, simpleCardCollection, carsCol, bookingsCol;
+
+async function verifyFirebaseTokenMiddleware(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ message: "No token provided" });
+
+  const idToken = authHeader.split(" ")[1];
+  if (!idToken) return res.status(401).json({ message: "No token provided" });
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    req.user = {
+      uid: decodedToken.uid,
+      email: decodedToken.email,
+      name: decodedToken.name || decodedToken.email,
+    };
+    next();
+  } catch (err) {
+    console.error(err);
+    res.status(401).json({ message: "Invalid Firebase token" });
+  }
+}
+
 
 async function run() {
   try {
