@@ -3,6 +3,13 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const cors = require("cors");
 const app = express();
+const admin = require("firebase-admin");
+const serviceAccount = require("./service.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+
 const port = process.env.PORT || 3000;
 
 app.use(cors());
@@ -20,7 +27,7 @@ const client = new MongoClient(uri, {
   },
 });
 
-let simpleCardCollection;
+let db, usersCol, simpleCardCollection;
 
 async function run() {
   try {
@@ -65,6 +72,8 @@ app.get('/api/cards/:id', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+
 
 app.get("/", (req, res) => {
   res.send(" simple crud server is running successfully");
