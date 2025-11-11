@@ -146,7 +146,37 @@ app.post("/cars", verifyFirebaseTokenMiddleware, async (req, res) => {
       }
     });
 
-    
+    app.put("/cars/:id", verifyFirebaseTokenMiddleware, async (req, res) => {
+      try {
+        const car = await carsCol.findOne({ _id: new ObjectId(req.params.id) });
+        if (!car) return res.status(404).json({ message: "Car not found" });
+        if (car.ownerEmail !== req.user.email) return res.status(403).json({ message: "Forbidden" });
+
+        const updates = req.body;
+        delete updates.ownerEmail;
+        await carsCol.updateOne({ _id: new ObjectId(req.params.id) }, { $set: updates });
+        res.json({ message: "Car updated" });
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+      }
+    });
+
+    app.delete("/cars/:id", verifyFirebaseTokenMiddleware, async (req, res) => {
+      try {
+        const car = await carsCol.findOne({ _id: new ObjectId(req.params.id) });
+        if (!car) return res.status(404).json({ message: "Car not found" });
+        if (car.ownerEmail !== req.user.email) return res.status(403).json({ message: "Forbidden" });
+
+        await carsCol.deleteOne({ _id: new ObjectId(req.params.id) });
+        res.json({ message: "Car deleted" });
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+      }
+    });
+
+ 
 
 app.get("/", (req, res) => {
   res.send(" simple crud server is running successfully");
