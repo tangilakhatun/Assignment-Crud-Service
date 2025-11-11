@@ -95,7 +95,58 @@ app.get('/api/cards/:id', async (req, res) => {
   }
 });
 
+// car cruc 
+app.post("/cars", verifyFirebaseTokenMiddleware, async (req, res) => {
+      try {
+        const { carName, description, category, rentPricePerDay, location, imageUrl } = req.body;
+        if (!carName || !description || !rentPricePerDay)
+          return res.status(400).json({ message: "Fill all required fields" });
 
+        const doc = {
+          carName,
+          description,
+          category: category || "General",
+          rentPricePerDay: Number(rentPricePerDay),
+          location: location || "Unknown",
+          imageUrl: imageUrl || null,
+          status: "Available",
+          ownerEmail: req.user.email,
+          createdAt: new Date(),
+        };
+
+        const result = await carsCol.insertOne(doc);
+        res.status(201).json({ message: " Car added", carId: result.insertedId });
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+      }
+    });
+
+    app.get("/cars", async (req, res) => {
+      try {
+        const q = req.query.q;
+        let filter = {};
+        if (q) filter.carName = { $regex: q, $options: "i" };
+        const cars = await carsCol.find(filter).sort({ createdAt: -1 }).toArray();
+        res.json(cars);
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+      }
+    });
+
+    app.get("/cars/:id", async (req, res) => {
+      try {
+        const car = await carsCol.findOne({ _id: new ObjectId(req.params.id) });
+        if (!car) return res.status(404).json({ message: "Car not found" });
+        res.json(car);
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+      }
+    });
+
+    
 
 app.get("/", (req, res) => {
   res.send(" simple crud server is running successfully");
