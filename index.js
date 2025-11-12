@@ -55,8 +55,11 @@ async function run() {
   try {
    
     await client.connect();
-    const db = client.db("sampleCars_db");
+     db = client.db("sampleCars_db");
     simpleCardCollection = db.collection("sampleCars");
+    carsCol = simpleCardCollection ;
+    // carsCol = db.collection("cars");      
+    bookingsCol = db.collection("bookings")
 
     console.log("sucssesfuly Connected to MongoDB");
 
@@ -176,7 +179,64 @@ app.post("/cars", verifyFirebaseTokenMiddleware, async (req, res) => {
       }
     });
 
- 
+  // book crud 
+
+  app.post("/bookings", verifyFirebaseTokenMiddleware, async (req, res) => {
+      try {
+        const { carId, startDate, endDate } = req.body;
+        if (!carId || !startDate || !endDate) return res.status(400).json({ message: "Fill all fields" });
+
+        const car = await carsCol.findOne({ _id: new ObjectId(carId) });
+        if (!car) return res.status(404).json({ message: "Car not found" });
+        if (car.status === "Booked") return res.status(409).json({ message: "Car already booked" });
+
+        const booking = {
+          carId: new ObjectId(carId),
+          carName: car.carName,
+          providerEmail: car.ownerEmail,
+          userEmail: req.user.email,
+          userName: req.user.name,
+          startDate: new Date(startDate),
+          endDate: new Date(endDate),
+          createdAt: new Date(),
+        };
+
+        const result = await bookingsCol.insertOne(booking);
+        await carsCol.updateOne({ _id: new ObjectId(carId) }, { $set: { status: "Booked" } });
+
+        res.status(201).json({ message: " Booking successful", bookingId: result.insertedId });
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+      }
+    });
+
+    app.get("/my-bookings", verifyFirebaseTokenMiddleware, async (req, res) => {
+      try {
+        const bookings = await bookingsCol.find({ userEmail: req.user.email }).sort({ createdAt: -1 }).toArray();
+        res.json(bookings);
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+      }
+    });
+
+    app.delete("/bookings/:id", verifyFirebaseTokenMiddleware, async (req, res) => {
+      try {
+        const booking = await bookingsCol.findOne({ _id: new ObjectId(req.params.id) });
+        if (!booking) return res.status(404).json({ message: "Booking not found" });
+        if (booking.userEmail !== req.user.email) return res.status(403).json({ message: "Forbidden" });
+
+        await bookingsCol.deleteOne({ _id: new ObjectId(req.params.id) });
+        await carsCol.updateOne({ _id: new ObjectId(booking.carId) }, { $set: { status: "Available" } });
+
+        res.json({ message: "Booking cancelled" });
+      } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Server error" });
+      }
+    });
+
 
 app.get("/", (req, res) => {
   res.send(" simple crud server is running successfully");
