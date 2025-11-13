@@ -129,7 +129,7 @@ app.post("/cars", verifyFirebaseTokenMiddleware, async (req, res) => {
       try {
         const q = req.query.q;
         let filter = {};
-        if (q) filter.carName = { $regex: q, $options: "i" };
+        if (q) filter.name = { $regex: q, $options: "i" };
         const cars = await carsCol.find(filter).sort({ createdAt: -1 }).toArray();
         res.json(cars);
       } catch (err) {
